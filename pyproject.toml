@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "k8s-dr-drill-runner"
+version = "0.1.0"
+description = "A tool-agnostic, CI-driven disaster recovery drill runner for Kubernetes."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Omkar Gupta" }
+]
+keywords = ["kubernetes", "disaster-recovery", "dr-drill", "sre", "devops", "failover"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Systems Administration",
+    "Intended Audience :: System Administrators",
+]
+
+dependencies = [
+    "kubernetes>=29.0.0",
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "black>=24.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+drill = "drill.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["drill*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# E501: line length handled by black instead.
+# UP042: keep PhaseStatus(str, Enum) rather than enum.StrEnum for readability
+# and to keep the code obviously portable to pre-3.11 Python at a glance.
+ignore = ["E501", "UP042"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
