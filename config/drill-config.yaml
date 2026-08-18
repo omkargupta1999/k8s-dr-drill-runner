@@ -1,0 +1,90 @@
+# drill-config.yaml
+#
+# Top-level configuration for a single DR drill run. This file describes
+# *where* the drill runs and *how patient* each phase should be before
+# declaring failure. It intentionally contains no application-specific
+# health-check definitions — those live in checks.yaml so the two concerns
+# (environment/timeouts vs. what-to-check) can evolve independently.
+
+# Logical name for this drill, echoed into the report for traceability.
+drill_name: "quarterly-dr-failover-drill"
+
+# The kubeconfig context to use. If omitted, the client falls back to
+# whatever context is active in the ambient kubeconfig (or in-cluster
+# config when running as a Job inside the cluster itself).
+kube_context: null
+
+# Namespace the drill operates against. Kept singular and explicit rather
+# than "all namespaces" so a misconfigured drill can't accidentally touch
+# workloads outside its blast radius.
+namespace: "app-primary"
+
+# Environment label purely for the report header — has no effect on
+# behavior. Useful for distinguishing a rehearsal in a lower environment
+# from a drill against a production-like environment.
+environment: "staging"
+
+# Operator identity to embed in the report. If not provided on the CLI
+# via --operator, report.py falls back to the "user" field of the active
+# kubeconfig context, and finally to the OS username.
+operator: null
+
+preflight:
+  # Maximum time (seconds) to wait for the API server to respond to a
+  # basic connectivity check before treating the cluster as unreachable.
+  api_timeout_seconds: 10
+  # Minimum number of nodes that must report Ready before preflight passes.
+  min_ready_nodes: 1
+  # Fraction (0-1) of the namespace's resource quota that may already be
+  # consumed before preflight refuses to proceed (protects against running
+  # a failover drill against a cluster that's already resource-starved).
+  max_quota_usage_ratio: 0.85
+
+healthcheck:
+  # How many times to poll a deployment/endpoint before giving up.
+  retries: 5
+  # Delay (seconds) between retries.
+  retry_interval_seconds: 3
+  # Overall timeout (seconds) for the baseline snapshot to complete.
+  timeout_seconds: 60
+
+failover:
+  # Ordered list of steps the failover phase executes. Each entry names an
+  # action understood by drill/failover.py. Executed strictly in order;
+  # if a step fails, subsequent steps are skipped (not attempted).
+  sequence:
+    - action: scale_up
+      target: secondary
+      description: "Scale the secondary (standby) deployment to serving capacity"
+    - action: wait_for_ready
+      target: secondary
+      description: "Wait until the secondary deployment reports all replicas Ready"
+    - action: shift_traffic
+      target: service
+      description: "Patch the Service selector to route traffic to the secondary deployment"
+    - action: scale_down
+      target: primary
+      description: "Scale the primary deployment down to simulate the DR posture"
+  # Timeout (seconds) applied to each individual step above.
+  step_timeout_seconds: 90
+  # How long (seconds) to wait after shifting traffic before validation
+  # begins, giving kube-proxy / endpoints time to converge.
+  settle_seconds: 10
+
+validate:
+  # Retries/timeout for post-failover assertions, independent from the
+  # baseline healthcheck settings above since post-failover conditions
+  # (e.g. expected replica count on the secondary) legitimately differ.
+  retries: 5
+  retry_interval_seconds: 3
+  timeout_seconds: 60
+  # Maximum allowed drop in overall healthy-endpoint ratio compared to the
+  # baseline snapshot before validation is marked failed. 0.0 means "must
+  # match or exceed baseline"; 0.1 allows a 10% degradation.
+  max_allowed_degradation_ratio: 0.10
+
+report:
+  # Directory generated reports are written to. Created at runtime if it
+  # does not exist. Never committed — see .gitignore.
+  output_dir: "reports"
+  formats: ["markdown", "json"]

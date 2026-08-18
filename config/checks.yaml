@@ -1,0 +1,40 @@
+# checks.yaml
+#
+# The concrete inventory of things the drill inspects: which Deployments
+# are expected to exist and how many replicas they should carry, and which
+# Service endpoints must be reachable. Kept separate from drill-config.yaml
+# so a new application component can be onboarded to the drill by editing
+# only this file.
+
+deployments:
+  - name: "web-frontend-primary"
+    expected_min_replicas: 3
+    role: primary
+  - name: "web-frontend-secondary"
+    expected_min_replicas: 3
+    role: secondary
+  - name: "orders-api-primary"
+    expected_min_replicas: 2
+    role: primary
+  - name: "orders-api-secondary"
+    expected_min_replicas: 2
+    role: secondary
+
+services:
+  - name: "web-frontend"
+    # The selector label the failover phase flips between primary and
+    # secondary deployments. Both deployment pod templates below carry
+    # this label with a different value.
+    selector_label: "role"
+    primary_value: "web-frontend-primary"
+    secondary_value: "web-frontend-secondary"
+    # Path used for an in-cluster readiness probe assertion during
+    # healthcheck/validate. This is illustrative, not a real endpoint.
+    health_path: "/healthz"
+    port: 8080
+  - name: "orders-api"
+    selector_label: "role"
+    primary_value: "orders-api-primary"
+    secondary_value: "orders-api-secondary"
+    health_path: "/healthz"
+    port: 8081
