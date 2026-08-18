@@ -1,5 +1,7 @@
 # k8s-dr-drill-runner
 
+[![drill](https://github.com/omkargupta1999/k8s-dr-drill-runner/actions/workflows/drill.yml/badge.svg)](https://github.com/omkargupta1999/k8s-dr-drill-runner/actions/workflows/drill.yml)
+
 An automated, tool-agnostic disaster recovery drill runner for Kubernetes.
 It replaces a manual, multi-team, runbook-driven DR exercise with a single
 CLI pipeline that checks cluster readiness, captures a health baseline,
